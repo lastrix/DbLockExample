@@ -1,6 +1,7 @@
 package com.lastrix.dblock;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class AbstractJobRunner implements Runnable {
@@ -25,14 +26,25 @@ public abstract class AbstractJobRunner implements Runnable {
                 if (lockedCount > 1) {
                     System.out.println("Locked by multiple threads! " + lockedCount);
                 }
-                unlock();
+                if (unlock()) {
+                    System.out.println("Released lock by " + Thread.currentThread().getName());
+                } else {
+                    System.out.println("Failed to unlock by " + Thread.currentThread().getName());
+                }
             }
+        }
+    }
+
+    protected final void rollbackSafely() {
+        try {
+            connection.rollback();
+        } catch (SQLException ignored) {
         }
     }
 
     protected abstract boolean tryLock();
 
-    protected abstract void unlock();
+    protected abstract boolean unlock();
 
     protected abstract AtomicInteger getLockCounter();
 }

@@ -55,16 +55,17 @@ public class MultiInsertLockTest {
         }
 
         @Override
-        protected void unlock() {
+        protected boolean unlock() {
             try (var stmt = connection.prepareStatement("DELETE FROM db_locks.multi_insert_lock t WHERE t.id = ?")) {
                 stmt.setInt(1, id);
                 if (stmt.executeUpdate() == 0) {
-                    System.out.println("Failed to unlock!");
+                    rollbackSafely();
+                    return false;
                 }
-                System.out.println("Released lock by " + Thread.currentThread().getName());
                 // we need to do this before commit, otherwise race-condition may occur
                 getLockCounter().decrementAndGet();
                 connection.commit();
+                return true;
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
@@ -73,13 +74,6 @@ public class MultiInsertLockTest {
         @Override
         protected AtomicInteger getLockCounter() {
             return tid % 2 == 0 ? LOCK_COUNT_EVEN : LOCK_COUNT_ODD;
-        }
-
-        private void rollbackSafely() {
-            try {
-                connection.rollback();
-            } catch (SQLException ignored) {
-            }
         }
 
         private static boolean isValidFailure(SQLException e) {

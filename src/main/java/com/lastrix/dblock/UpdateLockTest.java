@@ -46,6 +46,9 @@ public class UpdateLockTest {
                 try (var rs = selStmt.executeQuery()) {
                     if (rs.next()) {
                         id = rs.getInt(1);
+                    } else {
+                        rollbackSafely();
+                        return false;
                     }
                 }
                 updStmt.setInt(1, id);
@@ -58,13 +61,17 @@ public class UpdateLockTest {
         }
 
         @Override
-        protected void unlock() {
+        protected boolean unlock() {
             try (var stmt = connection.prepareStatement("UPDATE db_locks.update_lock t SET state = 0 WHERE t.id = ? AND t.state = 1")) {
                 stmt.setInt(1, id);
-                stmt.executeUpdate();
+                if ( stmt.executeUpdate() == 0) {
+                    rollbackSafely();
+                    return false;
+                }
                 // we need to do this before commit, otherwise race-condition may occur
                 getLockCounter().decrementAndGet();
                 connection.commit();
+                return true;
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

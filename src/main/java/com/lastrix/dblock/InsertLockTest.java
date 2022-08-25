@@ -54,16 +54,17 @@ public class InsertLockTest {
         }
 
         @Override
-        protected void unlock() {
+        protected boolean unlock() {
             try (var stmt = connection.prepareStatement("DELETE FROM db_locks.insert_lock t WHERE t.id = ?")) {
                 stmt.setInt(1, id);
                 if (stmt.executeUpdate() == 0) {
-                    System.out.println("Failed to unlock!");
+                    rollbackSafely();
+                    return false;
                 }
-                System.out.println("Released lock by " + Thread.currentThread().getName());
                 // we need to do this before commit, otherwise race-condition may occur
                 getLockCounter().decrementAndGet();
                 connection.commit();
+                return true;
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
@@ -72,13 +73,6 @@ public class InsertLockTest {
         @Override
         protected AtomicInteger getLockCounter() {
             return LOCK_COUNT;
-        }
-
-        private void rollbackSafely() {
-            try {
-                connection.rollback();
-            } catch (SQLException ignored) {
-            }
         }
 
         private static boolean isValidFailure(SQLException e) {
