@@ -40,6 +40,11 @@ public class UpdateLockTest {
 
         @Override
         protected boolean tryLock() {
+            // in this example we select first row that has state=0
+            // after that we try to change state of that row to 1 from 0,
+            // we can not simply change it to 1 without checking its state
+            // because other transaction may complete between our queries,
+            // thus making our update query obsolete
             try (var selStmt = connection.prepareStatement("SELECT id FROM db_locks.update_lock t WHERE t.state = 0 ORDER BY id LIMIT 1;");
                  var updStmt = connection.prepareStatement("UPDATE db_locks.update_lock t SET state = 1 WHERE t.id = ? AND t.state = 0")
             ) {
@@ -64,7 +69,7 @@ public class UpdateLockTest {
         protected boolean unlock() {
             try (var stmt = connection.prepareStatement("UPDATE db_locks.update_lock t SET state = 0 WHERE t.id = ? AND t.state = 1")) {
                 stmt.setInt(1, id);
-                if ( stmt.executeUpdate() == 0) {
+                if (stmt.executeUpdate() == 0) {
                     rollbackSafely();
                     return false;
                 }

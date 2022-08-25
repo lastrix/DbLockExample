@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Abstract class for handling locking/unlocking testing
+ */
 public abstract class AbstractJobRunner implements Runnable {
     protected final Connection connection;
     protected final int tid;
@@ -42,9 +45,24 @@ public abstract class AbstractJobRunner implements Runnable {
         }
     }
 
+    /**
+     * Try to lock row in database, return true if success
+     *
+     * @return boolean
+     */
     protected abstract boolean tryLock();
 
+    /**
+     * Try to unlock row in database, return true if success, this method should be successful all the time
+     *
+     * @return boolean
+     */
     protected abstract boolean unlock();
 
+    /**
+     * Get current lock counter for checking that only single thread acquired our lock
+     *
+     * @return AtomicInteger
+     */
     protected abstract AtomicInteger getLockCounter();
 }

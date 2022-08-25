@@ -20,6 +20,9 @@ public abstract class AbstractDBTest {
         this.threadCount = threadCount;
     }
 
+    /**
+     * Execute test plan according to your configuration
+     */
     public void run(){
         try (var connection = createConnection()) {
             setup(connection);
@@ -32,6 +35,10 @@ public abstract class AbstractDBTest {
         System.out.println("Time taken = " + Duration.between(start, Instant.now()).toMillis() + " ms");
     }
 
+    /**
+     * This test creates N threads each of them will wait until each ready to execute plan.
+     * The method will wait until all threads finished
+     */
     private void doTest() {
         CountDownLatch latch = new CountDownLatch(threadCount);
         var complete = new CountDownLatch(threadCount);
@@ -73,7 +80,18 @@ public abstract class AbstractDBTest {
         return connection;
     }
 
+    /**
+     * Create schema, tables and rows needed for tests
+     * @param connection
+     * @throws SQLException
+     */
     protected abstract void setup(Connection connection) throws SQLException;
 
+    /**
+     * This method should perform actual testing
+     * @param connection
+     * @param tid
+     * @throws Exception
+     */
     protected abstract void runJob(Connection connection, int tid) throws Exception;
 }

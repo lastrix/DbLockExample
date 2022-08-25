@@ -39,6 +39,11 @@ public class InsertLockTest {
 
         @Override
         protected boolean tryLock() {
+            // In this example we lock rows by performing insert query into our database.
+            // Only single row with primary key equal to 1 could exist. Because of that only
+            // single transaction may be successful. We may still get exception when calling
+            // executeUpdate(), but mostly when commit() called, that's what checked
+            // by #isValidFailure() method
             try (var stmt = connection.prepareStatement("INSERT INTO db_locks.insert_lock(id) VALUES(?)")) {
                 stmt.setInt(1, id);
                 boolean success = stmt.executeUpdate() > 0;
@@ -55,6 +60,8 @@ public class InsertLockTest {
 
         @Override
         protected boolean unlock() {
+            // unlocking is as simple is goes - remove row from our lock table, and it's done.
+            // Don't forget to commit changes to database.
             try (var stmt = connection.prepareStatement("DELETE FROM db_locks.insert_lock t WHERE t.id = ?")) {
                 stmt.setInt(1, id);
                 if (stmt.executeUpdate() == 0) {
